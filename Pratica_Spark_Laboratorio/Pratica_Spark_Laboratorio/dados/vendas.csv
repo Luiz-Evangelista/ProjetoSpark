@@ -1,0 +1,10 @@
+categoria,produto,quantidade,preco_unitario
+Eletrônicos,Mouse,2,75.00
+Eletrônicos,Teclado,1,120.00
+Eletrônicos,Fone,3,60.00
+Casa,Caneca,4,25.00
+Casa,Luminária,2,80.00
+Papelaria,Caderno,5,16.00
+Papelaria,Caneta,10,4.50
+Casa,Caneca,0,25.00
+Papelaria,Lápis,2,

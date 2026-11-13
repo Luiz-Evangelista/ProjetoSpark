@@ -1,0 +1,28 @@
+
+1. Registros por partição
++--------+---------+
+|particao|registros|
++--------+---------+
+|       0|        4|
+|       1|        5|
++--------+---------+
+
+
+2. Registros descartados pelo filtro
++---------+-------+----------+--------------+
+|categoria|produto|quantidade|preco_unitario|
++---------+-------+----------+--------------+
+|Casa     |Caneca |0         |25.00         |
++---------+-------+----------+--------------+
+
+
+3. Faturamento por categoria
+filter, withColumn e groupBy definem o plano do resumo.
+A ação show() solicita o resultado e exibe a tabela.
++-----------+------+--------+-----------+
+|categoria  |vendas|unidades|faturamento|
++-----------+------+--------+-----------+
+|Eletrônicos|3     |6       |450.00     |
+|Casa       |2     |6       |260.00     |
+|Papelaria  |3     |17      |135.00     |
++-----------+------+--------+-----------+

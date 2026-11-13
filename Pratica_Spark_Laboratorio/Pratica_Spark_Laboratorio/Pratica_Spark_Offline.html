@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Apache Spark na prática</title>
+  <style>
+    :root {
+      --ink: #152638;
+      --subtle: #425568;
+      --accent: #a44014;
+      --paper: #f7f5ef;
+      --line: #d8d9d4;
+      --white: #fff;
+      --tint: #f9ece3;
+      font-family: Inter, system-ui, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; font-size: 17px; line-height: 1.52; }
+    header { background: var(--ink); color: var(--white); border-bottom: 5px solid #bf5b29; }
+    .wrap { width: min(1080px, calc(100% - 2.5rem)); margin-inline: auto; }
+    header .wrap { padding: 2.5rem 0 2.2rem; }
+    header p { max-width: 750px; margin: .55rem 0 0; color: #e0e8f0; }
+    .label { font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; color: #ffb989; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(2.45rem, 6vw, 4rem); letter-spacing: -.055em; line-height: 1.05; margin-bottom: .7rem; }
+    h2 { font-size: clamp(1.55rem, 3.5vw, 2rem); letter-spacing: -.035em; line-height: 1.15; margin-bottom: .5rem; }
+    h3 { font-size: 1.06rem; margin: 0 0 .6rem; }
+    main { padding: 1.5rem 0 2.25rem; }
+    p { margin-bottom: .85rem; }
+    .scenario {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: .8rem; border-block: 1px solid var(--line); padding: 1rem 0;
+    }
+    .scenario p { margin: .2rem 0 0; color: var(--subtle); }
+    code { color: var(--ink); font-size: .92em; overflow-wrap: anywhere; }
+    button {
+      appearance: none; border: 1px solid transparent; border-radius: 5px; padding: .65rem 1rem;
+      font: inherit; font-weight: 700; line-height: 1.3; cursor: pointer; min-height: 45px;
+    }
+    button:focus-visible { outline: 3px solid #be5522; outline-offset: 3px; }
+    .action { color: var(--white); background: var(--accent); }
+    .action:hover { background: #842f0e; }
+    nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.25rem 0 1.45rem; }
+    nav button { background: var(--white); color: var(--ink); border-color: var(--line); }
+    nav button:hover { border-color: var(--ink); }
+    nav button[aria-pressed="true"] { background: var(--ink); color: var(--white); border-color: var(--ink); }
+    .description { color: var(--subtle); max-width: 800px; }
+    .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem; margin-top: 1.1rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--white); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-variant-numeric: tabular-nums; }
+    th, td { padding: .65rem .85rem; vertical-align: top; }
+    thead { background: var(--ink); color: var(--white); }
+    thead th { font-size: .86rem; }
+    tbody tr + tr, tfoot { border-top: 1px solid var(--line); }
+    tbody tr:nth-child(even) { background: #f6f7f8; }
+    tfoot { font-weight: 750; background: var(--tint); }
+    .num { text-align: right; white-space: nowrap; }
+    .note { background: var(--tint); border-left: 4px solid var(--accent); padding: .85rem 1rem; margin: 1rem 0 0; }
+    .note p { margin: 0; }
+    .compare { margin-top: 1.25rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    @media (max-width: 680px) {
+      .wrap { width: calc(100% - 1.5rem); }
+      header .wrap { padding: 1.65rem 0 1.4rem; }
+      .pair { grid-template-columns: 1fr; }
+      nav button { padding-inline: .65rem; font-size: .94rem; }
+      th, td { padding: .58rem .55rem; }
+    }
+    @media print {
+      header { background: var(--white); color: var(--ink); }
+      header p, .label { color: var(--ink); }
+      nav, button.action { display: none; }
+      .table-wrap { overflow: visible; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="label">Simulação didática</div>
+      <h1>Apache Spark na prática</h1>
+      <p>Explore as etapas do pipeline de vendas e descubra quanto uma venda com preço preenchido acrescenta ao faturamento.</p>
+    </div>
+  </header>
+  <main class="wrap">
+    <div id="interface" hidden>
+      <section class="scenario" aria-label="Dados da demonstração">
+        <div>
+          <strong id="cenario-titulo"></strong>
+          <p><code id="linha-csv"></code></p>
+        </div>
+        <button class="action" type="button" id="alterar-preco"></button>
+      </section>
+      <nav aria-label="Etapas da prática">
+        <button type="button" data-stage="0" aria-controls="etapa">1. Partições</button>
+        <button type="button" data-stage="1" aria-controls="etapa">2. Filtro</button>
+        <button type="button" data-stage="2" aria-controls="etapa">3. Faturamento</button>
+      </nav>
+      <div id="status" class="sr-only" role="status"></div>
+      <section id="etapa" aria-label="Resultado da etapa"></section>
+    </div>
+    <noscript>
+      <h2>Dados da demonstração</h2>
+      <p>Os 9 registros são divididos em duas partes. No CSV original, o filtro descarta a caneca com quantidade zero e o lápis sem preço.</p>
+      <p>Com preço de R$ 5,00 por lápis, a venda de duas unidades acrescenta R$ 10,00.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Faturamento</th><th scope="col">Antes</th><th scope="col">Depois</th></tr></thead>
+          <tbody><tr><th scope="row">Papelaria</th><td>R$ 125,00</td><td>R$ 135,00</td></tr><tr><th scope="row">Geral</th><td>R$ 835,00</td><td>R$ 845,00</td></tr></tbody>
+        </table>
+      </div>
+    </noscript>
+  </main>
+  <script type="application/json" id="dados">[{"categoria": "Eletrônicos", "produto": "Mouse", "quantidade": 2, "preco": 7500}, {"categoria": "Eletrônicos", "produto": "Teclado", "quantidade": 1, "preco": 12000}, {"categoria": "Eletrônicos", "produto": "Fone", "quantidade": 3, "preco": 6000}, {"categoria": "Casa", "produto": "Caneca", "quantidade": 4, "preco": 2500}, {"categoria": "Casa", "produto": "Luminária", "quantidade": 2, "preco": 8000}, {"categoria": "Papelaria", "produto": "Caderno", "quantidade": 5, "preco": 1600}, {"categoria": "Papelaria", "produto": "Caneta", "quantidade": 10, "preco": 450}, {"categoria": "Casa", "produto": "Caneca", "quantidade": 0, "preco": 2500}, {"categoria": "Papelaria", "produto": "Lápis", "quantidade": 2, "preco": null}]</script>
+  <script>
+    "use strict";
+
+    const dados = JSON.parse(document.getElementById("dados").textContent);
+    const formatador = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const etapa = document.getElementById("etapa");
+    const botoesEtapa = document.querySelectorAll("[data-stage]");
+    const botaoPreco = document.getElementById("alterar-preco");
+    let etapaAtual = 0;
+    let precoPreenchido = false;
+
+    function moeda(centavos) {
+      return formatador.format(centavos / 100);
+    }
+
+    function motivo(linha) {
+      if (!linha.categoria) return "Categoria vazia";
+      if (linha.quantidade <= 0) return "Quantidade zero ou negativa";
+      if (linha.preco === null) return "Preço vazio";
+      if (linha.preco <= 0) return "Preço zero ou negativo";
+      return "";
+    }
+
+    function particoes(corrigir) {
+      const linhas = dados.map(linha => corrigir && linha.produto === "Lápis"
+        ? { ...linha, preco: 500 }
+        : linha);
+      const corte = Math.floor(linhas.length / 2);
+      return [linhas.slice(0, corte), linhas.slice(corte)];
+    }
+
+    function somar(linhas, campo) {
+      return linhas.reduce((total, linha) => total + linha[campo], 0);
+    }
+
+    function agregar(linhas) {
+      const totais = new Map();
+      for (const linha of linhas) {
+        if (motivo(linha)) continue;
+        const categoria = totais.get(linha.categoria) || { vendas: 0, unidades: 0, faturamento: 0 };
+        categoria.vendas += 1;
+        categoria.unidades += linha.quantidade;
+        categoria.faturamento += linha.quantidade * linha.preco;
+        totais.set(linha.categoria, categoria);
+      }
+      return totais;
+    }
+
+    function resumir(partes) {
+      const totais = new Map();
+      for (const parte of partes) {
+        for (const [nome, parcial] of agregar(parte)) {
+          const total = totais.get(nome) || { vendas: 0, unidades: 0, faturamento: 0 };
+          total.vendas += parcial.vendas;
+          total.unidades += parcial.unidades;
+          total.faturamento += parcial.faturamento;
+          totais.set(nome, total);
+        }
+      }
+      return Array.from(totais, ([nome, valores]) => ({ nome, ...valores }))
+        .sort((a, b) => b.faturamento - a.faturamento);
+    }
+
+    function escapar(valor) {
+      return String(valor).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function celulas(linha, tag, numericas) {
+      return linha.map((valor, i) => "<" + tag + (tag === "th" ? ' scope="col"' : "")
+        + (numericas.includes(i) ? ' class="num"' : "") + ">"
+        + escapar(valor) + "</" + tag + ">").join("");
+    }
+
+    function tabela(rotulos, linhas, numericas = [], total = null) {
+      return '<div class="table-wrap"><table><thead><tr>' + celulas(rotulos, "th", numericas)
+        + "</tr></thead><tbody>"
+        + linhas.map(linha => "<tr>" + celulas(linha, "td", numericas) + "</tr>").join("")
+        + "</tbody>" + (total ? "<tfoot><tr>" + celulas(total, "td", numericas) + "</tr></tfoot>" : "")
+        + "</table></div>";
+    }
+
+    function mostrarParticoes(partes) {
+      return "<h2>9 registros em 2 partições</h2>"
+        + '<p class="description">Uma partição reúne linhas que podem ser processadas juntas. A distribuição abaixo ilustra a divisão do trabalho.</p>'
+        + '<div class="pair">' + partes.map((parte, i) => "<section><h3>Partição " + i + " (" + parte.length + " registros)</h3>"
+          + tabela(["Produto", "Categoria", "Qtd.", "Preço un."], parte.map(l => [
+            l.produto, l.categoria, l.quantidade, l.preco === null ? "Vazio" : moeda(l.preco),
+          ]), [2, 3]) + "</section>").join("") + "</div>";
+    }
+
+    function mostrarFiltro(partes) {
+      const linhas = partes.flat();
+      const rejeitadas = linhas.filter(motivo);
+      return "<h2>Registros descartados</h2>"
+        + '<p class="description">O filtro mantém vendas com categoria preenchida, quantidade positiva e preço positivo.</p>'
+        + tabela(["Produto", "Categoria", "Quantidade", "Motivo"], rejeitadas.map(l => [
+          l.produto, l.categoria, l.quantidade, motivo(l),
+        ]), [2])
+        + '<div class="note"><p><strong>' + (linhas.length - rejeitadas.length) + ' registros entram no cálculo.</strong></p></div>';
+    }
+
+    function mostrarFaturamento(partes) {
+      const resumo = resumir(partes);
+      const total = ["Total", somar(resumo, "vendas"), somar(resumo, "unidades"), moeda(somar(resumo, "faturamento"))];
+      const relatorio = "<h2>Faturamento por categoria</h2>"
+        + '<p class="description">Cada parte soma quantidade × preço. Os valores parciais são reunidos por categoria.</p>'
+        + tabela(["Categoria", "Vendas", "Unidades", "Faturamento"], resumo.map(l => [
+          l.nome, l.vendas, l.unidades, moeda(l.faturamento),
+        ]), [1, 2, 3], total);
+      if (!precoPreenchido) {
+        return relatorio + '<div class="note"><p>Se cada lápis custar R$ 5,00, quanto Papelaria passa a faturar?</p></div>';
+      }
+      const antes = resumir(particoes(false));
+      return relatorio + '<section class="compare"><h3>Antes e depois de preencher o preço</h3>'
+        + tabela(["Faturamento", "Antes", "Depois"], [
+          ["Papelaria", moeda(antes.find(l => l.nome === "Papelaria").faturamento), moeda(resumo.find(l => l.nome === "Papelaria").faturamento)],
+          ["Geral", moeda(somar(antes, "faturamento")), moeda(somar(resumo, "faturamento"))],
+        ], [1, 2]) + '<div class="note"><p>Dois lápis a R$ 5,00 acrescentam <strong>R$ 10,00</strong>.</p></div></section>';
+    }
+
+    function renderizar() {
+      const partes = particoes(precoPreenchido);
+      document.getElementById("cenario-titulo").textContent = precoPreenchido
+        ? "Preço unitário do lápis preenchido"
+        : "Preço unitário do lápis em branco";
+      document.getElementById("linha-csv").textContent = "Papelaria,Lápis,2," + (precoPreenchido ? "5.00" : "");
+      botaoPreco.textContent = precoPreenchido ? "Restaurar dados originais" : "Preencher com R$ 5,00";
+      for (const botao of botoesEtapa) {
+        botao.setAttribute("aria-pressed", String(Number(botao.dataset.stage) === etapaAtual));
+      }
+      const renderizadores = [mostrarParticoes, mostrarFiltro, mostrarFaturamento];
+      etapa.innerHTML = renderizadores[etapaAtual](partes);
+      document.getElementById("status").textContent = etapa.querySelector("h2").textContent;
+    }
+
+    for (const botao of botoesEtapa) {
+      botao.addEventListener("click", () => {
+        etapaAtual = Number(botao.dataset.stage);
+        renderizar();
+      });
+    }
+    botaoPreco.addEventListener("click", () => {
+      precoPreenchido = !precoPreenchido;
+      etapaAtual = precoPreenchido ? 2 : 0;
+      renderizar();
+    });
+    renderizar();
+    document.getElementById("interface").hidden = false;
+  </script>
+</body>
+</html>
